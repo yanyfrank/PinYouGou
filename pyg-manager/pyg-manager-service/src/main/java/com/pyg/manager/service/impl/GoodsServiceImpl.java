@@ -1,20 +1,20 @@
 package com.pyg.manager.service.impl;
 
+
 import com.alibaba.dubbo.config.annotation.Service;
+import com.alibaba.fastjson.JSON;
 import com.github.pagehelper.Page;
 import com.github.pagehelper.PageHelper;
 import com.pyg.manager.service.GoodsService;
-import com.pyg.mapper.TbGoodsDescMapper;
-import com.pyg.mapper.TbGoodsMapper;
-import com.pyg.mapper.TbItemMapper;
-import com.pyg.pojo.TbGoods;
-import com.pyg.pojo.TbGoodsDesc;
-import com.pyg.pojo.TbGoodsExample;
+import com.pyg.mapper.*;
+import com.pyg.pojo.*;
 import com.pyg.uitls.PageResult;
 import com.pyg.vo.Goods;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Date;
 import java.util.List;
+import java.util.Map;
 
 
 /**
@@ -35,7 +35,19 @@ public class GoodsServiceImpl implements GoodsService {
 	//注入sku商品mapper接口代理对象
 	@Autowired
 	private TbItemMapper itemMapper;
-	
+
+	//注入分类mapper接口代理对象
+	@Autowired
+	private TbItemCatMapper itemCatMapper;
+
+	//注入商家mapper接口代理对象
+	@Autowired
+	private TbSellerMapper sellerMapper;
+
+	//注入品牌mapper接口代理对象
+	@Autowired
+	private TbBrandMapper brandMapper;
+
 	/**
 	 * 查询全部
 	 */
@@ -49,8 +61,14 @@ public class GoodsServiceImpl implements GoodsService {
 	 */
 	@Override
 	public PageResult findPage(int pageNum, int pageSize) {
-		PageHelper.startPage(pageNum, pageSize);		
-		Page<TbGoods> page=   (Page<TbGoods>) goodsMapper.selectByExample(null);
+		PageHelper.startPage(pageNum, pageSize);
+
+		TbGoodsExample example = new TbGoodsExample();
+		TbGoodsExample.Criteria criteria = example.createCriteria();
+
+		//设置参数，查询未删除的商品
+		criteria.andIsDeleteEqualTo("1");
+		Page<TbGoods> page=   (Page<TbGoods>) goodsMapper.selectByExample(example);
 		return new PageResult(page.getTotal(), page.getResult());
 	}
 
@@ -76,7 +94,99 @@ public class GoodsServiceImpl implements GoodsService {
 		//保存
 		goodsDescMapper.insertSelective(goodsDesc);
 
-		//3，保存商品sku表
+		//获取是否启用规格属性值
+		String isEnableSpec = tbGoods.getIsEnableSpec();
+
+		//判断是否启用规格
+		if("1".equals(isEnableSpec)){
+			//3，保存商品sku表
+			//获取sku列表
+			List<TbItem> itemList = goods.getItemList();
+
+			//循环遍历，保存商品对象
+			for(TbItem tbItem: itemList){
+				//不全sku商品属性值
+				//设置标题；spu+sku
+				String spec = tbItem.getSpec();//{'网络'：'联通4G'}
+				//把json格式规格属性字符串转换成map对象
+				Map<String,String> specMap = (Map<String, String>) JSON.parse(spec);
+				//定义字符串，组装规格值
+				String value = "";
+				//循环map，获取规格中值
+				for (String key : specMap.keySet()) {
+					value += " " +specMap.get(key);
+				}
+
+				//设置商品的标题
+				tbItem.setTitle(tbGoods.getGoodsName()+value+tbGoods.getCaption());
+
+				//调用保存sku代码
+				this.saveItem(tbItem,tbGoods,goodsDesc);
+			}
+		}else{
+
+			//未启用规格
+			//创建一个sku商品对象，保存商品对象
+			TbItem tbItem = new TbItem();
+
+			//设置商品的标题
+			tbItem.setTitle(tbGoods.getGoodsName()+tbGoods.getCaption());
+
+			//调用保存sku代码
+			this.saveItem(tbItem,tbGoods,goodsDesc);
+
+		}
+
+
+
+	}
+
+	private void saveItem(TbItem tbItem,TbGoods tbGoods,TbGoodsDesc goodsDesc){
+		//卖点
+		tbItem.setSellPoint(tbGoods.getCaption());
+		//图片地址
+		//从商品描述对象中获取图片地址
+		String itemImages = goodsDesc.getItemImages();
+		//把json字符串转换为集合数组
+		if(itemImages!=null){
+
+			List<Map> imageList = JSON.parseArray(itemImages, Map.class);
+
+			//判断图片地址是否存在
+			if(imageList!=null && imageList.size()>0){
+				tbItem.setImage((String)imageList.get(0).get("url"));
+			}
+		}
+
+		//分页id
+		//智能设置三级节点，叶子节点分类id
+		tbItem.setCategoryid(tbGoods.getCategory3Id());
+
+		//创建时间
+		Date date = new Date();
+		tbItem.setUpdateTime(date);
+		tbItem.setCreateTime(date);
+
+		//设置spuid
+		tbItem.setGoodsId(tbGoods.getId());
+
+		//设置商家id
+		tbItem.setSellerId(tbGoods.getSellerId());
+
+		//查询分类名称
+		TbItemCat tbItemCat = itemCatMapper.selectByPrimaryKey(tbGoods.getCategory3Id());
+		tbItem.setCategory(tbItemCat.getName());
+
+		//查询品牌数据
+		TbBrand tbBrand = brandMapper.selectByPrimaryKey(tbGoods.getBrandId());
+		tbItem.setBrand(tbBrand.getName());
+
+		//查询商家
+		TbSeller seller = sellerMapper.selectByPrimaryKey(tbGoods.getSellerId());
+		tbItem.setSeller(seller.getNickName());
+
+		//保存
+		itemMapper.insertSelective(tbItem);
 	}
 
 	
@@ -99,12 +209,16 @@ public class GoodsServiceImpl implements GoodsService {
 	}
 
 	/**
-	 * 批量删除
+	 * 逻辑删除
 	 */
 	@Override
 	public void delete(Long[] ids) {
 		for(Long id:ids){
-			goodsMapper.deleteByPrimaryKey(id);
+			//根据id查询商品对象
+			TbGoods tbGoods = goodsMapper.selectByPrimaryKey(id);
+			tbGoods.setIsDelete("0");
+			//修改
+			goodsMapper.updateByPrimaryKey(tbGoods);
 		}		
 	}
 	
@@ -117,11 +231,60 @@ public class GoodsServiceImpl implements GoodsService {
 		TbGoodsExample.Criteria criteria = example.createCriteria();
 
 		if(goods!=null){
+			//判断参数是否有值
+			String sellerId = goods.getSellerId();
+			if(sellerId!=null && !"".equals(sellerId)){
+				//查询当前商家的商品数据
+				criteria.andSellerIdEqualTo(sellerId);
+			}
+
+			//获取商品状态
+			String auditStatus = goods.getAuditStatus();
+
+			if(auditStatus!=null && !"".equals(auditStatus)){
+				//根据状态进行查询商品
+				criteria.andAuditStatusEqualTo(auditStatus);
+			}
+
+			//获取用户名
+			String goodsName = goods.getGoodsName();
+			if(goodsName!=null && !"".equals(goodsName)){
+				//根据商品名称进行模糊查询
+				criteria.andGoodsNameLike("%"+goodsName+"%");
+			}
+
 
 		}
 		
 		Page<TbGoods> page= (Page<TbGoods>)goodsMapper.selectByExample(example);
 		return new PageResult(page.getTotal(), page.getResult());
 	}
-	
+
+	@Override
+	public void updateStatus(Long[] ids, String status) {
+		//循环ids,修改每一个id对应的商品状态
+		for(Long id : ids){
+			//根据id查询出商品数据
+			TbGoods tbGoods = goodsMapper.selectByPrimaryKey(id);
+			//设置状态
+			tbGoods.setAuditStatus(status);
+			//完成修改
+			goodsMapper.updateByPrimaryKey(tbGoods);
+		}
+
+	}
+
+	@Override
+	public void isMarketable(Long[] ids, String status) {
+		//循环ids,修改每一个id对应的商品状态
+		for(Long id : ids){
+			//根据id查询出商品数据
+			TbGoods tbGoods = goodsMapper.selectByPrimaryKey(id);
+			//设置状态
+			tbGoods.setIsMarketable(status);
+			//完成修改
+			goodsMapper.updateByPrimaryKey(tbGoods);
+		}
+	}
+
 }

@@ -1,5 +1,11 @@
 package com.pyg.manager.service.impl;
 import java.util.List;
+import java.util.Map;
+
+import com.alibaba.fastjson.JSON;
+import com.pyg.mapper.TbSpecificationOptionMapper;
+import com.pyg.pojo.TbSpecificationOption;
+import com.pyg.pojo.TbSpecificationOptionExample;
 import org.springframework.beans.factory.annotation.Autowired;
 import com.alibaba.dubbo.config.annotation.Service;
 import com.github.pagehelper.Page;
@@ -23,6 +29,10 @@ public class TypeTemplateServiceImpl implements TypeTemplateService {
 
 	@Autowired
 	private TbTypeTemplateMapper typeTemplateMapper;
+
+	//注入规格选项mapper接口代理对象
+	@Autowired
+	private TbSpecificationOptionMapper specificationOptionMapper;
 	
 	/**
 	 * 查询全部
@@ -106,5 +116,37 @@ public class TypeTemplateServiceImpl implements TypeTemplateService {
 		Page<TbTypeTemplate> page= (Page<TbTypeTemplate>)typeTemplateMapper.selectByExample(example);		
 		return new PageResult(page.getTotal(), page.getResult());
 	}
-	
+
+	@Override
+	public List<Map> findSpecOptionsList(Long typeId) {
+
+		//根据模板id查询模板对象
+		TbTypeTemplate Template = typeTemplateMapper.selectByPrimaryKey(typeId);
+		//获取模板中的规格属性
+		String specIds = Template.getSpecIds();
+		//把规格json字符串转换为json对象
+		List<Map> specMap = JSON.parseArray(specIds, Map.class);
+		//循环规格集合
+		for(Map map : specMap){
+
+			//获取map的id
+			Long id = new Long((Integer)map.get("id"));
+
+			//创建规格选项example对象
+			TbSpecificationOptionExample example = new TbSpecificationOptionExample();
+			//创建criteria对象
+			TbSpecificationOptionExample.Criteria criteria = example.createCriteria();
+			//设置查询参数，根据外键查询
+			criteria.andSpecIdEqualTo(id);
+
+			//根据id查询规格选项
+			List<TbSpecificationOption> optionList = specificationOptionMapper.selectByExample(example);
+
+			//把规格选项集合放入map
+			map.put("options",optionList);
+		}
+
+		return specMap;
+	}
+
 }
