@@ -28,5 +28,10 @@ app.service('goodsService',function($http){
 	//搜索
 	this.search=function(page,rows,searchEntity){
 		return $http.post('../goods/search/'+page+"/"+rows, searchEntity);
-	}    	
+	}    	;
+
+	//商家系统商品上下架
+	this.isMarketable=function (ids, status) {
+        return $http.get('../goods/isMarketable/'+ids+'/'+status);
+    }
 });

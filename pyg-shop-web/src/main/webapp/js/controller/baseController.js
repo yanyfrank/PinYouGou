@@ -4,7 +4,7 @@ app.controller("baseController", function ($scope) {
     //定义分页查询代码
     //定义reloadList
     $scope.reloadList = function () {
-        $scope.findPage($scope.paginationConf.currentPage, $scope.paginationConf.itemsPerPage);
+        $scope.search($scope.paginationConf.currentPage, $scope.paginationConf.itemsPerPage);
     };
 
     //分页控件配置

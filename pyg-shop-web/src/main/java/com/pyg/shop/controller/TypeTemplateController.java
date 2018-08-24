@@ -1,5 +1,7 @@
 package com.pyg.shop.controller;
 import java.util.List;
+import java.util.Map;
+
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -110,5 +112,13 @@ public class TypeTemplateController {
 	public PageResult search(@RequestBody TbTypeTemplate typeTemplate, int page, int rows  ){
 		return typeTemplateService.findPage(typeTemplate, page, rows);		
 	}
-	
+
+	/**
+	 * 需求：商品录入，根据不同的规格选项组合成不同sku商品，查询规格选线
+	 */
+	@RequestMapping("findSpecOptionsList/{typeId}")
+	public List<Map> findSpecOptionsList(@PathVariable Long typeId){
+		//调用服务层
+		return typeTemplateService.findSpecOptionsList(typeId);
+	}
 }

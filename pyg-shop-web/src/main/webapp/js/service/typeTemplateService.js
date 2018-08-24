@@ -28,5 +28,10 @@ app.service('typeTemplateService',function($http){
 	//搜索
 	this.search=function(page,rows,searchEntity){
 		return $http.post('../typeTemplate/search/'+page+"/"+rows, searchEntity);
-	}    	
+	};
+	
+	//查询规格选项
+	this.findSpecOptionsList = function (typeId) {
+        return $http.get('../typeTemplate/findSpecOptionsList/'+typeId);
+    }
 });

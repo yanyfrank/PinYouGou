@@ -1,4 +1,5 @@
 package com.pyg.shop.controller;
+import java.security.Security;
 import java.util.List;
 
 import com.pyg.vo.Goods;
@@ -111,9 +112,27 @@ public class GoodsController {
 	 * @param rows
 	 * @return
 	 */
-	@RequestMapping("/search")
-	public PageResult search(@RequestBody TbGoods goods, int page, int rows  ){
+	@RequestMapping("/search/{page}/{rows}")
+	public PageResult search(@RequestBody TbGoods goods,@PathVariable int page,@PathVariable int rows  ){
+		//获取当前登陆用户登陆名
+		String sellerId = SecurityContextHolder.getContext().getAuthentication().getName();
+		goods.setSellerId(sellerId);
 		return goodsService.findPage(goods, page, rows);		
+	}
+
+	/**
+	 * 需求：更新商品状态，商家上下架
+	 */
+	@RequestMapping("isMarketable/{ids}/{status}")
+	public PygResult isMarketable(@PathVariable Long[] ids,@PathVariable String status){
+		try {
+			//调用远程服务方法
+			goodsService.isMarketable(ids,status);
+			return new PygResult(true,"操作成功");
+		} catch (Exception e) {
+			e.printStackTrace();
+			return new PygResult(false,"操作失败");
+		}
 	}
 	
 }

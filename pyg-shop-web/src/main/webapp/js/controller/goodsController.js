@@ -112,6 +112,8 @@ app.controller('goodsController' ,function($scope,$controller   ,goodsService,it
         })
 
     });
+    //对象必须进行初始化
+    $scope.entity = {goodsDesc:{itemImages:[],customAttributeItems:[],specificationItems:[]}};
 
     //监控模板id变量,一旦发生变化，根据模板id查询品牌
     $scope.$watch('entity.goods.typeTemplateId',function (newValue,oldValue) {
@@ -121,6 +123,14 @@ app.controller('goodsController' ,function($scope,$controller   ,goodsService,it
 			$scope.typeTemplate = data;
             //用JSON.parse转换字符串
             $scope.typeTemplate.brandIds = JSON.parse($scope.typeTemplate.brandIds);
+
+            //获取模板中扩展属性赋值给商品描述表中扩展属性字段
+			$scope.entity.goodsDesc.customAttributeItems = JSON.parse($scope.typeTemplate.customAttributeItems);
+        });
+
+        //调用service服务层方法，查询规格选项
+        typeTemplateService.findSpecOptionsList(newValue).success(function (data) {
+			$scope.specList = data;
         })
 
     });
@@ -135,5 +145,200 @@ app.controller('goodsController' ,function($scope,$controller   ,goodsService,it
 				alert(data.message);
 			}
         })
+    };
+
+
+
+	//定义方法，把图片颜色，图片地址绑定到商品描述对象中item-images属性中
+	$scope.add_image_entity = function () {
+
+		$scope.entity.goodsDesc.itemImages.push($scope.image_entity);
+    };
+
+
+    //选中的角标集合
+    /*$scope.selectIndexs=[];*/
+	/*//更新复选
+    $scope.updateSelection = function($event, index) {
+        if($event.target.checked){//如果是被选中,则增加到数组
+            $scope.selectIndexs.push( index);
+
+        }else{
+            var idx = $scope.selectIds.indexOf(index);
+            $scope.selectIndexs.splice(idx, 1);//删除
+
+        }
+    }*/
+
+    //删除行
+	$scope.delTableRow = function () {
+    	//判断
+		if($scope.selectIndexs.length>0){
+            $scope.entity.goodsDesc.itemImages.splice(0,$scope.selectIndexs.length,$scope.selectIndexs);
+
+            //清空角标
+            $scope.selectIndexs=[];
+		}
+
+    };
+
+    //判断选中是那个规格中属性
+    searchSpecOptions = function (list,key,name) {
+		//循环
+		for(var i=0;i<list.length;i++){
+			if(list[i][key]==name){
+				return list[i];
+			}
+		}
+		return null;
+    };
+
+
+    //定义方法：组装规格选项参数
+	//参数1：时间对象
+	//参数2：规格名称
+	//参数3：规格选项
+	$scope.updateSpecOptionSelection = function ($event,text,name) {
+
+		//获取规格选择值
+		var specOptionList = $scope.entity.goodsDesc.specificationItems;
+
+		//判断选中是那个规格中属性
+		//规格有：网络，内存
+		var obj = searchSpecOptions(specOptionList,'attributeName',text);
+
+		//判断选中的规格属性列表是否为空
+		if(obj!=null){
+
+			//判断是选中是否是选中事件
+			if($event.target.checked){
+				obj.attributeValue.push(name);
+			}else{
+				//取消事件
+				obj.attributeValue.splice(obj.attributeValue.indexOf(name),1);
+
+				//判断规格选项是否全部删除
+				if(obj.attributeValue.length==0){
+                    $scope.entity.goodsDesc.specificationItems.splice($scope.entity.goodsDesc.specificationItems.indexOf(obj,1));
+				}
+			}
+
+		}else{
+			//第一次选择，需要给规格属性specificationItems初始化数据
+            $scope.entity.goodsDesc.specificationItems.push({"attributeName":text,"attributeValue":[name]});
+
+		}
+
+    };
+
+    // //参数格式：specificationItems = [{"attributeName":"网络","attributeValue":["电信2G","联通2G"]},
+    // {"attributeName":"机身内存","attributeValue":["32G","16G","64G"]}]
+    //定义方法，根据选中规格选项，动态生成sku行
+	$scope.createSKUTable = function () {
+
+		//初始化sku行
+		$scope.entity.itemList = [{spec:{},price:0,num:9999,status:0,isDeafult:1}];
+
+        //获取选中规格选项值
+        //第一次：[{"attributeName":"网络","attributeValue":["联通4G"]}]
+        //第二次：[{"attributeName":"网络","attributeValue":["联通4G","联通3G"]}]
+        //3:[{"attributeName":"网络","attributeValue":["联通4G","联通3G"]},{"attributeName":"机身内存","attributeValue":["16G"]}]
+		var specList = $scope.entity.goodsDesc.specificationItems;
+
+		//判断规格选项都取消选中，删除初始化行
+		if(specList.length==0){
+            $scope.entity.itemList = [];
+		}
+
+		//动态生成sku行
+		//根据选中规格选项，动态生成sku行
+		//循环规格选项
+		for(var i=0;i<specList.length;i++){
+
+            //抽取方法，生成行
+            //第一次循环返回结果：itemList = [{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+            //第二次返回结果：itemList=[{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1},
+            // {spec: {"网络":"联通3G"}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+            //3:itemList=[{spec: {"网络":"联通4G","机身内存":16G}, price: 0, num: 9999999, status: 1, isDefault: 1},
+            // {spec: {"网络":"联通3G","机身内存":16G}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+			$scope.entity.itemList = addColumn($scope.entity.itemList,specList[i].attributeName,specList[i].attributeValue);
+		}
+
+    };
+
+	//动态生成sku行
+	//参数1：保存sku行的集合
+	//参数2：规格名称
+	//参数3：规格属性
+	addColumn = function (itemList,name,values) {
+
+		//定义一个集合；封装sku行
+		var newList = [];
+
+        //循环sku行
+        //第一次循环：[{spec: {}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+        //第二次：[{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+		for(var i=0;i<itemList.length;i++){
+
+            //获取旧的行对象
+            //第一次循环：{spec: {}, price: 0, num: 9999999, status: 1, isDefault: 1}
+            //第二次：{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}
+			var oldRow = itemList[i];
+
+            //循环规格属性
+            //第一次循环：values = ["联通4G"]
+            //第二次：:["联通4G","联通3G"]
+			for(var j=0;j<values.length;j++){
+				//深克隆，克隆数据，新创建对象
+				var newRow = JSON.parse(JSON.stringify(oldRow))
+                //添加规格属性数据
+                //第一次循环：{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}
+                //第二次循环：{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}
+                //{spec: {"网络":"联通3G"}, price: 0, num: 9999999, status: 1, isDefault: 1}
+				newRow.spec[name]=values[j];
+                //把新生成行添加到newList集合
+                //[{spec: {"网络":"联通4G"}, price: 0, num: 9999999, status: 1, isDefault: 1}]
+				newList.push(newRow);
+
+			}
+		}
+		return newList;
     }
+
+    //商品状态
+    $scope.status=['未审核','已审核','审核未通过','关闭'];
+
+	$scope.markStatus = ["下架","上架"];
+
+	//定义数组，封装分类名称
+	$scope.allCatList = [];
+	
+	//查询所有的分类属性
+	$scope.findAllItemCatList = function () {
+		itemCatService.findAll().success(function (data) {
+
+			//循环分类集合
+			for(var i=0;i<data.length;i++){
+				//把分类id作为数组角标
+				//而在id角标对应位置上存储id对应分类名称
+                $scope.allCatList[data[i].id] = data[i].name;
+			}
+        })
+    };
+
+	//定义方法，做上下架操作
+	$scope.isMarketable = function (status) {
+		//调用服务层方法
+		goodsService.isMarketable($scope.selectIds,status).success(function (data) {
+            if(data.success){
+                $scope.reloadList();//刷新列表
+                $scope.selectIds=[];
+            }else{
+            	alert(data.message);
+			}
+        })
+    }
+
+
+
 });	
