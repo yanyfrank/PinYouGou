@@ -13,8 +13,16 @@ app.controller('contentController' ,function($scope,contentService){
 				$scope.catList[categoryId]=response;
 			}			
 		);
-	}    
-	
+	}
+
+	//angularJS参数路由：在静态页面传递参数必须加上#
+	//语法：#？key=value
+
+	//搜索跳转的方法
+	$scope.solrSearch = function () {
+		//转发请求，把搜索请求转发搜索系统，且传递参数
+		window.location.href = "http://localhost:8083/search.html#?keywords="+$scope.keywords;
+    }
 
     
 });	
