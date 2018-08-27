@@ -11,14 +11,14 @@
 <link rel="stylesheet" type="text/css" href="css/pages-list.css" />
 <link rel="stylesheet" type="text/css"
 	href="css/widget-cartPanelView.css" />
-<script src="../plugins/angularjs/angular.min.js"></script>
-<script src="../js/base.js"></script>
-<script src="../js/service/searchService.js"></script>
-<script src="../js/controller/searchController.js"></script>
+<script src="plugins/angularjs/angular.min.js"></script>
+<script src="js/base.js"></script>
+<script src="js/service/searchService.js"></script>
+<script src="js/controller/searchController.js"></script>
 </head>
 
 <body ng-app="pyg" ng-controller="searchController"
-	ng-init="searchList();">
+	ng-init="loadSearchList();">
 	<!-- 头部栏位 -->
 	<!--页面顶部-->
 	<div id="nav-bottom">
@@ -75,7 +75,7 @@
 											ng-model="searchMap.keywords" type="text"
 											class="input-error input-xxlarge" />
 										<button class="sui-btn btn-xlarge btn-danger"
-											ng-click="searchList();" type="button">搜索</button>
+											ng-click="reloadSearchList();" type="button">搜索</button>
 									</div>
 								</form>
 							</div>
@@ -208,12 +208,12 @@
 					<div class="fl key">网络制式</div>
 					<div class="fl value">
 						<ul class="type-list">
-							<li><a href="#" ng-click="addFilterCondition('网络制式','电信2G')">电信2G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('网络制式','电信3G')">电信3G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('网络制式','移动3G')">移动3G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('网络制式','联通3G')">联通3G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('网络制式','联通4G')">联通4G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('网络制式','联通4G')">移动4G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','电信2G')">电信2G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','电信3G')">电信3G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','移动3G')">移动3G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','联通3G')">联通3G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','联通4G')">联通4G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('网络','联通4G')">移动4G</a></li>
 						</ul>
 					</div>
 					<div class="fl ext"></div>
@@ -222,12 +222,12 @@
 					<div class="fl key">内存</div>
 					<div class="fl value">
 						<ul class="type-list">
-							<li><a href="#" ng-click="addFilterCondition('内存','4G')">4G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('内存','8G')">8G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('内存','16G')">16G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('内存','32G')">32G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('内存','64G')">64G</a></li>
-							<li><a href="#" ng-click="addFilterCondition('内存','128G')">128G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','4G')">4G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','8G')">8G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','16G')">16G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','32G')">32G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','64G')">64G</a></li>
+							<li><a href="#" ng-click="addFilterCondition('机身内存','128G')">128G</a></li>
 						</ul>
 					</div>
 					<div class="fl ext"></div>
@@ -259,17 +259,18 @@
 				<div class="sui-navbar">
 					<div class="navbar-inner filter">
 						<ul class="sui-nav">
-							<li class="active"><a href="#">综合</a></li>
+							<li class="active"><a href="#" ng-click="sortSearch('','ASC')">综合</a></li>
 							<li><a href="#">销量</a></li>
-							<li><a href="#">新品</a></li>
+							<li><a href="#" ng-click="sortSearch('updatetime','DESC')">新品</a></li>
 							<li><a href="#">评价</a></li>
-							<li><a href="#">价格</a></li>
+							<li><a href="#" ng-if="searchMap.sort=='DESC'" ng-click="sortSearch('price','ASC')">价格↑</a></li>
+							<li><a href="#" ng-if="searchMap.sort=='ASC'"  ng-click="sortSearch('price','DESC')">价格↓</a></li>
 						</ul>
 					</div>
 				</div>
 				<div class="goods-list">
 					<ul class="yui3-g">
-						<li class="yui3-u-1-5" ng-repeat="entity in itemList.rows">
+						<li class="yui3-u-1-5" ng-repeat="entity in resultMap.rows">
 							<div class="list-wrap">
 								<div class="p-img">
 									<a href="item.html" target="_blank"><img
@@ -279,8 +280,8 @@
 									<strong> <em>¥</em> <i>{{entity.price}}</i>
 									</strong>
 								</div>
-								<div class="attr">
-									<em>{{entity.title}}</em>
+								<div class="attr" >
+									<em ng-bind-html="entity.title | trustHtml"></em>
 								</div>
 								<div class="cu">
 									<em><span>促</span>满一件可参加超值换购</em>
@@ -301,19 +302,16 @@
 				<div class="fr page">
 					<div class="sui-pagination pagination-large">
 						<ul>
-							<li class="prev disabled"><a href="#">«上一页</a></li>
-							<li class="active"><a href="#">1</a></li>
-							<li><a href="#">2</a></li>
-							<li><a href="#">3</a></li>
-							<li><a href="#">4</a></li>
-							<li><a href="#">5</a></li>
-							<li class="dotted"><span>...</span></li>
-							<li class="next"><a href="#">下一页»</a></li>
+							<li class="prev {{isTopPage()?'disabled':''}}"><a href="#"  ng-click="queryForPage(searchMap.page-1)">«上一页</a></li>
+							<li class="dotted" ng-if="isPreDot"><span>...</span></li>
+							<li class="{{searchMap.page==p?'active':''}}" ng-repeat="p in pageLable"  ng-click="queryForPage(p)"><a href="#">{{p}}</a></li>
+							<li class="dotted" ng-if="isPosDot"><span>...</span></li>
+							<li class="next {{isLastPage()?'disabled':''}}" ><a href="#" ng-click="queryForPage(searchMap.page+1)">下一页»</a></li>
 						</ul>
 						<div>
-							<span>共10页&nbsp;</span><span> 到第 <input type="text"
+							<span>共{{resultMap.totalPages}}页&nbsp;</span><span> 到第 <input type="text" ng-model="searchMap.page"
 								class="page-num"> 页
-								<button class="page-confirm" onclick="alert(1)">确定</button></span>
+								<button class="page-confirm" ng-click="queryForPage(searchMap.page)">确定</button></span>
 						</div>
 					</div>
 				</div>
