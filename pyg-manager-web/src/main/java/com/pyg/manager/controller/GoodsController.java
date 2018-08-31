@@ -1,16 +1,25 @@
 package com.pyg.manager.controller;
 
 import com.alibaba.dubbo.config.annotation.Reference;
+import com.alibaba.fastjson.JSON;
 import com.pyg.manager.service.GoodsService;
 import com.pyg.pojo.TbGoods;
+import com.pyg.pojo.TbItem;
 import com.pyg.uitls.PageResult;
 import com.pyg.uitls.PygResult;
 import com.pyg.vo.Goods;
+import org.apache.activemq.command.ActiveMQTopic;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessageCreator;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import javax.jms.JMSException;
+import javax.jms.Message;
+import javax.jms.Session;
 import java.util.List;
 
 /**
@@ -114,13 +123,48 @@ public class GoodsController {
 		return goodsService.findPage(goods, page, rows);
 	}
 
+	//注入消息发送你模板
+	@Autowired
+	private JmsTemplate jmsTemplate;
 
+	//注入消息发送目的地
+	@Autowired
+	private ActiveMQTopic activeMQTopic;
+
+	/**
+	 * 需求：更新商品状态，商家商品审核
+	 * 商品添加，修改，删除更新数据库数据，导致数据库数据和索引库数据不一致
+	 * 因此做数据库数据和索引库数据同步
+	 * 无论是添加，修改，删除的商品都需要通过审核，然后才能同步到索引库，
+	 * 因此在审核商品时候发送消息同步索引库
+	 *
+	 * 	商品修改，添加，都需要做商品重新审核 ，同步索引库和静态页面
+	 * @param ids
+	 * @param status
+	 * @return
+	 */
 	@RequestMapping("updateStatus/{ids}/{status}")
 	public PygResult updateStatus(@PathVariable Long[] ids,@PathVariable String status){
 
 		try {
 			//调用服务层service方法
 			goodsService.updateStatus(ids,status);
+
+			//只有审核才发送消息
+			if("1".equals(status)){
+				//查询审核通过sku数据
+				List<TbItem> itemList = goodsService.findSkuItemList(ids);
+				//把集合转换为json字符串
+				String itemJson = JSON.toJSONString(itemList);
+				//发送消息
+				jmsTemplate.send(activeMQTopic, new MessageCreator() {
+					@Override
+					public Message createMessage(Session session) throws JMSException {
+						return session.createTextMessage(itemJson);
+					}
+				});
+			}
+
 			return new PygResult(true,"审核通过");
 		} catch (Exception e) {
 			e.printStackTrace();
