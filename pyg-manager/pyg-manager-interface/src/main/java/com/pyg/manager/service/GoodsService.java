@@ -2,6 +2,7 @@ package com.pyg.manager.service;
 
 import com.pyg.pojo.TbGoods;
 import com.pyg.pojo.TbGoodsDesc;
+import com.pyg.pojo.TbItem;
 import com.pyg.uitls.PageResult;
 import com.pyg.vo.Goods;
 
@@ -71,4 +72,9 @@ public interface GoodsService {
 	 * 需求：更新商品状态，商家上下架
 	 */
 	void isMarketable(Long[] ids,String status);
+
+	/**
+	 * 需求：根据sku，id查询sku
+	 */
+	List<TbItem> findSkuItemList(Long[] ids);
 }

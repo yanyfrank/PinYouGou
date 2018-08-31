@@ -12,6 +12,7 @@ import com.pyg.uitls.PageResult;
 import com.pyg.vo.Goods;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -285,6 +286,27 @@ public class GoodsServiceImpl implements GoodsService {
 			//完成修改
 			goodsMapper.updateByPrimaryKey(tbGoods);
 		}
+	}
+
+	@Override
+	public List<TbItem> findSkuItemList(Long[] ids) {
+		//创建sku集合，封装多个spu所对应sku集合
+		List<TbItem> itemList = new ArrayList<>();
+
+		//循环spu ids
+		for (Long id : ids) {
+			//创建tbitem的example对象
+			TbItemExample example = new TbItemExample();
+			//创建criteria对象
+			TbItemExample.Criteria criteria = example.createCriteria();
+			//设置外键查询
+			criteria.andGoodsIdEqualTo(id);
+			//执行查询
+			List<TbItem> skuList = itemMapper.selectByExample(example);
+
+			itemList.addAll(skuList);
+		}
+		return itemList;
 	}
 
 }
