@@ -10,7 +10,7 @@
 		http://www.springframework.org/schema/context
 		http://www.springframework.org/schema/context/spring-context.xsd">
 	<!-- solr服务器地址 -->
-	<solr:solr-server id="solrServer" url="http://193.112.23.174:7080/solr/item" />
+	<solr:solr-server id="solrServer" url="http://192.168.18.11:8080/solr/item" />
 	<!-- solr模板，使用solr模板可对索引库进行CRUD的操作 -->
 	<bean id="solrTemplate" class="org.springframework.data.solr.core.SolrTemplate">
 		<constructor-arg ref="solrServer" />
