@@ -9,7 +9,7 @@
         http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context.xsd">
     <!--把activeMQ交给spring管理-->
 	<bean id="targetConnectionFactory" class="org.apache.activemq.ActiveMQConnectionFactory">
-		<constructor-arg name="brokerURL" value="tcp://193.112.23.174:61616"></constructor-arg>
+		<constructor-arg name="brokerURL" value="tcp://192.168.18.11:61616"></constructor-arg>
 	</bean>
 
 	<!--创建spring jms组件提供的工厂对象，无缝接管activeMQ-->
