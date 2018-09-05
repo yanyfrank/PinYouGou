@@ -12,6 +12,7 @@ import org.springframework.test.context.ContextConfiguration;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 
 import java.util.List;
+import java.util.UUID;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = "classpath*:spring/applicationContext-dao.xml")
@@ -76,5 +77,7 @@ public class SqlGenTest {
         List<TbProvinces> list = provincesMapper.selectByExample(example);
         System.out.println(list);
     }
+
+
 
 }
