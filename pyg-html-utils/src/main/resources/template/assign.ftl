@@ -7,7 +7,7 @@
     <#assign userinfo={"name":"八戒","age":"100000","address":"天河"}>
 </head>
 <body>
-<#include "hello.com.pyg.ftl">
+<#include "hello.ftl">
 <h1>
     获取常量值：${name}
 </h1>
