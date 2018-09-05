@@ -39,7 +39,7 @@
 	<!-- 定义表现层服务名称: 服务消费者名称 -->
 	<dubbo:application name="shop-web" />
 	<!-- 指定服务消费地址  193.112.23.174-->
-	<dubbo:registry address="zookeeper://193.112.23.174:2181"/>
+	<dubbo:registry address="zookeeper://192.168.18.11:2181"/>
 	<!-- 使用注解方法引入服务 -->
 	<dubbo:annotation package="com.pyg.shop.controller" />
 
