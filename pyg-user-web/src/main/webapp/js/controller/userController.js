@@ -1,7 +1,13 @@
  //控制层 
-app.controller('userController' ,function($scope,userService){
+app.controller('userController' ,function($scope,userService,loginService){
 	
 
+	//获取用户登陆信息
+	$scope.showName = function () {
+		loginService.loadLoginName().success(function (data) {
+			$scope.loginName = data.loginName;
+        })
+    }
 	
     //读取列表数据绑定到表单中  
 	$scope.findAll=function(){
