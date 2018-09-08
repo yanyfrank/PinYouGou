@@ -41,14 +41,13 @@ public class PayServiceImpl implements PayService {
 
     /**
      * 需求：生成二维码
-     * @param userId
      * @return
      */
     @Override
-    public Map createQrCode(String userId) {
+    public Map createQrCode(String out_trade_no,String total_fee) {
 
         try {
-            //查询支付金额
+            /*//查询支付金额
             //创建example对象
             TbOrderExample example = new TbOrderExample();
             //创建criteria对象
@@ -58,13 +57,13 @@ public class PayServiceImpl implements PayService {
             //执行查询
             List<TbOrder> tbOrders = orderMapper.selectByExample(example);
 
-            //定风翼记录总金额变量
+            //定单记录总金额变量
             Double totalFee = 0d;
 
             //循环多个订单，计算总金额
             for (TbOrder tbOrder : tbOrders) {
                 totalFee+=tbOrder.getPayment().doubleValue();
-            }
+            }*/
 
 
             //创建一个map对象，封装支付下单参数
@@ -78,12 +77,9 @@ public class PayServiceImpl implements PayService {
             //商品描述
             maps.put("body","品优购");
 
-            //创建idworker对象，生成支付订单号
-            IdWorker idWorker = new IdWorker();
-            long payId = idWorker.nextId();
 
             //商户订单号
-            maps.put("out_trade_no",payId+"");
+            maps.put("out_trade_no",out_trade_no);
 
             //设置支付金额
             maps.put("total_fee","1");
@@ -113,9 +109,9 @@ public class PayServiceImpl implements PayService {
             Map<String, String> stringMap = WXPayUtil.xmlToMap(content);
 
             //金额
-            stringMap.put("total_fee",totalFee+"");
+            stringMap.put("total_fee",total_fee+"");
             //订单号
-            stringMap.put("out_trade_no",payId+"");
+            stringMap.put("out_trade_no",out_trade_no);
 
             return stringMap;
         } catch (Exception e) {
@@ -173,8 +169,50 @@ public class PayServiceImpl implements PayService {
             return stringMap;
         } catch (Exception e) {
             e.printStackTrace();
-            return null;
         }
+        return null;
 
+    }
+
+    /**
+     * 关闭交易
+     * @param out_trade_no
+     * @return
+     */
+    @Override
+    public Map closePay(String out_trade_no) {
+        try {
+            //1，创建map集合，封装参数
+            Map<String,String> maps = new HashMap<>();
+            //公众号id
+            maps.put("appid",appid);
+            //商户号
+            maps.put("mch_id",partner);
+            //随机字符串
+            maps.put("nonce_str", WXPayUtil.generateNonceStr());
+            //商户订单号
+            maps.put("out_trade_no",out_trade_no);
+
+            //具有签名的xml格式
+            String xmlParam = WXPayUtil.generateSignedXml(maps, partnerkey);
+
+            //2,执行请求
+            HttpClient httpClient = new HttpClient("https://api.mch.weixin.qq.com/pay/closeorder");
+            httpClient.setHttps(true);
+            //设置请求参数
+            httpClient.setXmlParam(xmlParam);
+            //设置请求方式
+            httpClient.post();
+
+            //3,获取返回数据
+            String content = httpClient.getContent();
+            //将返回结果转换成map对象
+            Map<String, String> stringMap = WXPayUtil.xmlToMap(content);
+
+            return stringMap;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return null;
     }
 }

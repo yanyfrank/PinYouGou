@@ -6,10 +6,9 @@ public interface PayService {
 
     /**
      * 需求：生成二维码
-     * @param userId
      * @return
      */
-    Map createQrCode(String userId);
+    Map createQrCode(String out_trade_no,String total_fee);
 
 
     /**
@@ -17,4 +16,9 @@ public interface PayService {
      * 参数：订单号
      */
     Map queryStatus(String out_trade_no);
+
+    /**
+     * 关闭微信订单
+     */
+    Map closePay(String out_trade_no);
 }
